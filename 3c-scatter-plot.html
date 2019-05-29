@@ -5,26 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
     <title>Scatter Plot</title>
-
     <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
     <script src="https://d3js.org/d3.v5.min.js"></script>
-
     <style>
       text {
         font: 11pt sans-serif;
         font-family: 'Open Sans', sans-serif;
       }
-
       .title {
         font-size: 20pt;
         font-weight: bold;
       }
-
       circle {
         stroke: black;
         opacity: 0.5;
       }
-
       .axis path,
       .axis line {
         fill: none;
@@ -32,12 +27,10 @@
         shape-rendering: crispEdges;
         stroke-width: 1px;
       }
-
       .axis-label {
         font-size: 16pt;
         font-weight: bold;
       }
-
     </style>
   </head>
   <body>
@@ -51,26 +44,25 @@
               width  = outerWidth - margin.left - margin.right,
               height = outerHeight - margin.top - margin.bottom
 
+        const xColumn = d => d.distance
+        const yColumn = d => d.arr_delay
+        const colorColumn = d => d.origin
+        const circleSizeColumn = d => d.carrierCount
+        const xAxisLabel = "Distance"
+        const yAxisLabel = "Arrival Delay"
+        const title = `Relationship between ${xAxisLabel} and ${yAxisLabel}`
+        const rMin = 4 // "r" stands for radius
+        const rMax = 12
+
         // Append an SVG to body with outerWidth and outerHeight
         const svg = d3.select("body").append("svg")
             .attr("width", outerWidth)
             .attr("height", outerHeight)
 
+        const g = svg.append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`)
+
         const render = data => {
-
-          const xColumn = d => d.distance
-          const yColumn = d => d.arr_delay
-          const colorColumn = d => d.origin
-          const circleSizeColumn = d => d.carrierCount
-          const xAxisLabel = "Distance"
-          const yAxisLabel = "Arrival Delay"
-          const title = `Relationship between ${xAxisLabel} and ${yAxisLabel}`
-          const rMin = 4 // "r" stands for radius
-          const rMax = 12
-
-          //const margin = ({top: 40, right: 120, bottom: 60, left: 70})
-          //const innerWidth = width - margin.left - margin.right
-          //const innerHeight = height - margin.top - margin.bottom
 
           const xScale = d3.scaleLinear()
               .domain(d3.extent(data, xColumn))
@@ -82,17 +74,27 @@
               .range([height, 0])
               .nice()
 
+          // SOURCE: https://github.com/d3/d3-scale#ordinal-scales
+          // SOURCE: https://github.com/d3/d3-scale-chromatic/blob/master/README.md#api-reference
           const colorScale = d3.scaleOrdinal()
               .domain(data.map(colorColumn))
               .range(d3.schemeCategory10)
 
+          // SOURCE: https://github.com/d3/d3-scale#scaleSqrt
           const circleSizeScale = d3.scaleSqrt()
               .domain(d3.extent(data.map(circleSizeColumn)))
               .range([rMin, rMax])
 
-          const g = svg.append("g")
-              .attr("transform", `translate(${margin.left},${margin.top})`)
+          // Append a circle for each object in the dataset
+          g.selectAll("circle")
+              .data(data)
+              .join("circle")
+              .attr("cy", d => yScale(yColumn(d)))
+              .attr("cx", d => xScale(xColumn(d)))
+              .attr("r", d => circleSizeScale(circleSizeColumn(d)))
+              .style("fill", d => colorScale(colorColumn(d)))
 
+          // Specify the design of the group of elements for the yAxis
           const yAxisG = g.append("g")
               .call(d3.axisLeft(yScale).tickSizeOuter(0))
 
@@ -105,10 +107,14 @@
               .attr("fill", "black")
               .text(yAxisLabel)
 
+          // Replace G with B when value is in the billions
+          // SOURCE: https://vizhub.com/curran/a68d01b8ebde472c91505b2cb307fd1b
+          // SOURCE: https://github.com/d3/d3-format#locale_formatPrefix
           const xAxisTickFormat = number =>
               d3.format(".2s")(number)
                   .replace("G", "B")
 
+          // Specify the design of the group of elements for the xAxis
           const xAxisG = g.append("g")
               .call(d3.axisBottom(xScale).tickSizeOuter(0))
               .attr("transform", `translate(0,${height})`)
@@ -121,74 +127,74 @@
               .attr("fill", "black")
               .text(xAxisLabel)
 
-          g.selectAll("circle").data(data)
-              .enter().append("circle")
-              .attr("cy", d => yScale(yColumn(d)))
-              .attr("cx", d => xScale(xColumn(d)))
-              .attr("r", d => circleSizeScale(circleSizeColumn(d)))
-              .style("fill", d => colorScale(colorColumn(d)))
-
+          // Append text to the chart to serve as the title
           g.append("text")
               .attr("class", "title")
               .attr("x", margin.left)
               .attr("y", -20)
               .text(title)
 
+          // Append circles for each of the unique values in the colorColumn to serve as the legend
+          // In this case, the colorColumn is "origin", which has 3 unique values: LGA, EWR, JFK
           g.selectAll("mydots")
               .data([...new Set(data.map(colorColumn))])
-              .enter()
-              .append("circle")
+              .join("circle")
                   .attr("cx", width + 70)
                   .attr("cy", function(d,i){ return 160 + i*25}) // 160 is where the first dot appears. 25 is the distance between dots
                   .attr("r", 7)
                   .style("fill", d => colorScale(d))
 
+          // Append text for each of the unique values in the colorColumn to serve as the legend
+          // In this case, the colorColumn is "origin", which has 3 unique values: LGA, EWR, JFK
           g.selectAll("mylabels")
             .data([...new Set(data.map(colorColumn))])
-            .enter()
-            .append("text")
+            .join("text")
               .attr("x", width + 90)
               .attr("y", function(d,i){ return 160 + i*25}) // 160 is where the first dot appears. 25 is the distance between dots
               .style("fill", d => colorScale(d))
-              .text(d => d)
               .attr("text-anchor", "left")
               .style("alignment-baseline", "middle")
+              .text(d => d)
         }
 
-  			d3.csv("flights.csv")
+  			d3.csv("flights.csv", d3.autoType)
           .then((flights) => {
 
-            flights.forEach(d => {
-              d.distance = +d.distance
-              d.arr_delay = +d.arr_delay
-              d.time_hour = new Date(d.time_hour)
-              d.year = new Date(d.year)
-            })
+              flights.forEach(d => {
+                  d.distance = +d.distance
+                  d.arr_delay = +d.arr_delay
+                  d.time_hour = new Date(d.time_hour)
+              })
 
-            const mask = d => (d.arr_delay < 100) && (d.distance < 1000)
-            return sample = flights.filter(mask).slice(0,500)
+              const sampleSize = 500
+              const mask = d => (d.arr_delay < 100) && (d.distance < 1000)
+              return sample = flights.filter(mask).slice(0,sampleSize)
 
           })
           .then((sample) => {
 
-            const carrierCounts = d3.nest()
-              .key(d => d.carrier)
-              .rollup(v => v.length)
-              .entries(sample)
+              // Group the data by carrier and count the number of observations per group
+              const carrierCounts = d3.nest()
+                .key(d => d.carrier)
+                .rollup(v => v.length)
+                .entries(sample)
+              console.log(carrierCounts)
 
-              sample.forEach(function(flight) {
-                  var result = carrierCounts.filter(function(carrier) {
-                      return carrier.key === flight.carrier
-                  })
-                  flight.carrierCount = (result[0] !== undefined) ? result[0].value : null;
+              // A simple join (left outer join in database terms) using native Array functions
+              // SOURCE: https://observablehq.com/@dakoop/combining-data-learn-js-data
+              const joinedSample = [...sample]
+              joinedSample.forEach((flight) => {
+                  const result = carrierCounts.filter((carrier) => carrier.key === flight.carrier)
+                  flight.carrierCount = (result[0] !== undefined) ? result[0].value : null
               })
 
-            render(sample)
+              console.log(sample)
+              render(sample)
 
           })
           .catch(function(error){
-             // handle error
-             console.log(error)
+               // handle error
+               console.log(error)
           })
 
 		</script>
