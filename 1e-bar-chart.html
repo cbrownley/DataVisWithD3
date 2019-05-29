@@ -5,12 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
     <title>Bar Chart</title>
-
     <link href="./styles.css" rel="stylesheet">
-
     <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
     <script src="https://d3js.org/d3.v5.min.js"></script>
-
     <style></style>
   </head>
   <body>
@@ -18,8 +15,11 @@
     <div id="chart"></div>
 		<script type="text/javascript">
 
+        // Function to capitalize the first character of every word
+        // SOURCE: https://www.w3resource.com/javascript-exercises/javascript-string-exercise-9.php
         const capitalize = (str) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase())
 
+        // An array of objects with the text and value for the options in the dropdown selector
         const options = [{text: "Alphabetical", value: "name-ascending"},
                          {text: "Frequency, descending", value: "value-descending"},
                          {text: "Frequency, ascending", value: "value-ascending"}]
@@ -35,117 +35,143 @@
             .attr("width", outerWidth)
             .attr("height", outerHeight)
 
+        // Append a group, shifted by margin.left and margin.top
+        const g = svg.append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`)
+
         const render = data => {
 
-          const xValue = d => d.value
-          const yValue = d => d.key
+            // Functions that return the key (y) and value (x)
+            // from each object in the dataset
+            const xValue = d => d.value
+            const yValue = d => d.key
 
-          // populate the dropdown selector with text-value options
-          d3.select("#selector")
-            .selectAll('options')
-              .data(options)
-            .enter()
-              .append('option')
-            .text(d => d.text)
-            .attr("value", d => d.value)
+            // SOURCE: https://github.com/d3/d3-scale
+            const xScale = d3.scaleLinear()
+                .domain([0, d3.max(data, xValue)])
+                .range([0, width])
 
-          const xScale = d3.scaleLinear()
-              .domain([0, d3.max(data, xValue)])
-              .range([0, width])
+            // SOURCE: https://github.com/d3/d3-scale#band-scales
+            // Band scales are like ordinal scales except the output range is continuous and numeric
+            const yScale = d3.scaleBand()
+                .domain(data.map(yValue))
+                .range([0, height])
+                .padding(0.1)
 
-          const yScale = d3.scaleBand()
-              .domain(data.map(yValue))
-              .range([0, height])
-              .padding(0.1)
+            // Specify the design of the group of elements for the yAxis
+            const yAxis = g => g
+                .call(d3.axisLeft(yScale).tickSizeOuter(0))
+                .call(g => g.selectAll(".domain, .tick line").remove())
 
-          const g = svg.append("g")
-              .attr("transform", `translate(${margin.left},${margin.top})`)
+            // Append a group for the y-axis
+            const gy = g.append("g")
+                .call(yAxis)
 
-          const yAxis = g => g
-              .call(d3.axisLeft(yScale).tickSizeOuter(0))
-              .call(g => g.selectAll(".domain, .tick line").remove())
+            // Append text to the y-axis to serve as the axis label
+            gy.append("text")
+                .attr("class", "axis-label")
+                .attr("text-anchor", "middle")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -margin.left + 20)
+                .attr("x", -height / 2)
+                .attr("fill", "black")
+                .text("State")
 
-          const gy = g.append("g")
-              .call(yAxis)
+            // Specify the design of the group of elements for the xAxis
+            const xAxis = g => g
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(xScale).tickSizeOuter(0))
+                .call(g => g.select(".domain").remove())
 
-          gy.append("text")
-              .attr("class", "axis-label")
-              .attr("text-anchor", "middle")
-              .attr("transform", "rotate(-90)")
-              .attr("y", -margin.left + 20)
-              .attr("x", -height / 2)
-              .attr("fill", "black")
-              .text("State")
+            // Append a group for the x-axis
+            const gx = g.append("g")
+                .call(xAxis)
 
-          const xAxis = g => g
-              .attr("transform", `translate(0,${height})`)
-              .call(d3.axisBottom(xScale).tickSizeOuter(0))
-              .call(g => g.select(".domain").remove())
+            // Append text to the x-axis to serve as the axis label
+            gx.append("text")
+                .attr("class", "axis-label")
+                .attr("text-anchor", "middle")
+                .attr("x", width / 2)
+                .attr("y", 50)
+                .attr("fill", "black")
+                .text("Number of Users")
 
-          const gx = g.append("g")
-              .call(xAxis)
+            // Append text to the chart to serve as the title
+            g.append("text")
+                .attr("class", "title")
+                .attr("text-anchor", "middle")
+                .attr("x", width / 2)
+                .attr("y", -10)
+                .text("Number of Users per State")
 
-          gx.append("text")
-              .attr("class", "axis-label")
-              .attr("text-anchor", "middle")
-              .attr("x", width / 2)
-              .attr("y", 50)
-              .attr("fill", "black")
-              .text("Number of Users")
-
-          g.append("text")
-              .attr("class", "title")
-              .attr("text-anchor", "middle")
-              .attr("x", width / 2)
-              .attr("y", -10)
-              .text("Number of Users per State")
-
-          const bars = g.selectAll("rect")
-              .data(data)
-              .join("rect")
-              .attr("y", d => yScale(yValue(d)))
-              .attr("width", d => xScale(xValue(d)))
-              .attr("height", yScale.bandwidth())
-
-          // a function that takes the selected option, specifying how to
-          // sort the bars, and then uses it to reorder the bars
-          // SOURCE 1: https://observablehq.com/@d3/sortable-bar-chart
-          // SOURCE 2: https://www.d3-graph-gallery.com/graph/line_select.html
-          const update = (selection) => {
-
-            const t = svg.transition()
-                .duration(800)
-
-            switch (selection) {
-                case "name-ascending":   data.sort((a, b) => a.key.localeCompare(b.key)); break;
-                case "value-descending": data.sort((a, b) => b.value - a.value); break;
-                case "value-ascending":  data.sort((a, b) => a.value - b.value); break;
-            }
-
-            yScale.domain(data.map(yValue))
-
-            bars.data(data)
-                .transition(t)
-                .delay((d, i) => i * 10)
+            // Append a rect for each object in the original dataset
+            const bars = g.selectAll("rect")
+                .data(data)
+                .join("rect")
                 .attr("y", d => yScale(yValue(d)))
                 .attr("width", d => xScale(xValue(d)))
+                .attr("height", yScale.bandwidth())
 
-            gy.transition(t)
-                .call(yAxis)
-              .selectAll(".tick")
-                .delay((d, i) => i * 10)
-          }
+            // Populate the options in the dropdown selector with the text and value
+            // of the objects in the array named "options"
+            d3.select("#selector")
+              .selectAll('options')
+                .data(options)
+              .enter()
+                .append('option')
+              .text(d => d.text)
+              .attr("value", d => d.value)
 
-          d3.select("#selector").on("change", d => {
-              const selectedOption = d3.select("#selector").property("value")
-              update(selectedOption)
-          })
+            // A function that takes the selected option, which specifies how to sort the bars,
+            // and uses it to reorder the bars
+            // SOURCE 1: https://observablehq.com/@d3/sortable-bar-chart
+            // SOURCE 2: https://www.d3-graph-gallery.com/graph/line_select.html
+            const update = (selection) => {
+
+              // SOURCE: https://github.com/d3/d3-transition
+              const t = svg.transition()
+                  .duration(800)
+
+              // Use a switch statement to sort the data based on the user's selection
+              switch (selection) {
+                  case "name-ascending":   data.sort((a, b) => a.key.localeCompare(b.key)); break;
+                  case "value-descending": data.sort((a, b) => b.value - a.value); break;
+                  case "value-ascending":  data.sort((a, b) => a.value - b.value); break;
+              }
+
+              // Update the yScale domain based on the the yValue of the newly-reordered data
+              yScale.domain(data.map(yValue))
+
+              // Update the locations of the bars based on the newly-reordered data
+              bars.data(data)
+                  .transition(t)
+                  .delay((d, i) => i * 10)
+                  .attr("y", d => yScale(yValue(d)))
+                  .attr("width", d => xScale(xValue(d)))
+
+              // Update the yAxis based on the newly-reordered data
+              gy.transition(t)
+                  .call(yAxis)
+                .selectAll(".tick")
+                  .delay((d, i) => i * 10)
+            }
+
+            // SOURCE: https://www.d3-graph-gallery.com/graph/line_select.html
+            // SOURCE: https://medium.com/@yonester/on-d3-and-arrow-functions-b6559c1cebb8
+            d3.select("#selector").on("change", (d, i, nodes) => {
+                const selectedOption = d3.select(nodes[i]).property("value")
+                update(selectedOption)
+            })
 
         }
 
-  			d3.csv("randomuser5000.csv")
+        // SOURCE: https://observablehq.com/@dakoop/reading-in-data-learn-js-data
+  			d3.csv("randomuser5000.csv", d3.autoType)
           .then((data) => {
-            var stateCounts = d3.nest()
+
+            // Group the data by state and count the number of observations per group; Sort name-ascending
+            // SOURCE: https://observablehq.com/@dakoop/grouping-data-learn-js-data
+            const stateCounts = d3.nest()
               .key(d => capitalize(d["location.state"]))
               .rollup(v => v.length)
               .entries(data)
@@ -155,6 +181,7 @@
 
             console.log(stateCounts)
             render(stateCounts)
+
           })
           .catch(function(error){
              // handle error

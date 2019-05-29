@@ -12,7 +12,6 @@
         font: 11pt sans-serif;
         font-family: 'Open Sans', sans-serif;
       }
-
       .axis path,
       .axis line {
         fill: none;
@@ -24,6 +23,8 @@
   <body>
 		<script type="text/javascript">
 
+        // Function to capitalize the first character of every word
+        // SOURCE: https://www.w3resource.com/javascript-exercises/javascript-string-exercise-9.php
         const capitalize = (str) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase())
 
         const outerWidth = 740,
@@ -41,39 +42,54 @@
         const g = svg.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`)
 
+        // Functions that return the key (y) and value (x)
+        // from each object in the dataset
         const xValue = d => d.value
         const yValue = d => d.key
 
+        // SOURCE: https://github.com/d3/d3-scale
         const xScale = d3.scaleLinear()
             .range([0, width])
 
+        // SOURCE: https://github.com/d3/d3-scale#band-scales
+        // Band scales are like ordinal scales except the output range is continuous and numeric
         const yScale = d3.scaleBand()
             .range([0, height])
             .padding(0.1)
 
         const render = data => {
+            // Establish the domains for xScale and yScale based on the data
+            // xScale domain extends from 0 to the maximum value in the data
+            // yScale domain corresponds to each state in the data
+            xScale.domain([0, d3.max(data, xValue)])
+            yScale.domain(data.map(yValue))
 
-          xScale.domain([0, d3.max(data, xValue)])
-          yScale.domain(data.map(yValue))
-
-          g.selectAll("rect")
-              .data(data)
-              .join("rect")
-              .attr("y", d => yScale(yValue(d)))
-              .attr("width", d => xScale(xValue(d)))
-              .attr("height", yScale.bandwidth())
+            // Append a rect for each object in the dataset
+            g.selectAll("rect")
+                .data(data)
+                .join("rect")
+                .attr("y", d => yScale(yValue(d)))
+                .attr("width", d => xScale(xValue(d)))
+                .attr("height", yScale.bandwidth())
         }
 
-  			d3.csv("randomuser5000.csv")
+        // SOURCE: https://observablehq.com/@dakoop/reading-in-data-learn-js-data
+        // SOURCE: https://github.com/d3/d3/blob/master/CHANGES.md
+        // SOURCE: https://github.com/d3/d3-dsv
+  			d3.csv("randomuser5000.csv", d3.autoType)
           .then((data) => {
-            var stateCounts = d3.nest()
-              .key(d => capitalize(d["location.state"]))
-              .rollup(v => v.length)
-              .entries(data)
-              .sort((a, b) => b.value - a.value)
 
-            // console.log(stateCounts)
+            // Group the data by state and count the number of observations per group; Sort descending
+            // SOURCE: https://observablehq.com/@dakoop/grouping-data-learn-js-data
+            const stateCounts = d3.nest()
+              .key(d => capitalize(d["location.state"])) // group by state
+              .rollup(v => v.length) // count number of obs per state
+              .entries(data)
+              .sort((a, b) => b.value - a.value) // sort descending
+
+            console.log(stateCounts)
             render(stateCounts)
+
           })
           .catch(function(error){
              // handle error

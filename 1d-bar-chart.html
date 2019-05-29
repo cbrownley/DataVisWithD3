@@ -5,17 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
     <title>Bar Chart</title>
-
     <link href="./styles.css" rel="stylesheet">
-
     <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
     <script src="https://d3js.org/d3.v5.min.js"></script>
-
     <style></style>
   </head>
   <body>
 		<script type="text/javascript">
 
+        // Function to capitalize the first character of every word
+        // SOURCE: https://www.w3resource.com/javascript-exercises/javascript-string-exercise-9.php
         const capitalize = (str) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase())
 
         const outerWidth = 740,
@@ -29,100 +28,123 @@
             .attr("width", outerWidth)
             .attr("height", outerHeight)
 
+        // Append a group, shifted by margin.left and margin.top
         const g = svg.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`)
 
+        // Functions that return the key (y) and value (x)
+        // from each object in the dataset
         const xValue = d => d.value
         const yValue = d => d.key
 
-
         const render = data => {
 
-          const xScale = d3.scaleLinear()
-              .domain([0, d3.max(data, xValue)])
-              .range([0, width])
+            // SOURCE: https://github.com/d3/d3-scale
+            const xScale = d3.scaleLinear()
+                .domain([0, d3.max(data, xValue)])
+                .range([0, width])
 
-          const yScale = d3.scaleBand()
-              .domain(data.map(yValue))
-              .range([0, height])
-              .padding(0.1)
+            // SOURCE: https://github.com/d3/d3-scale#band-scales
+            // Band scales are like ordinal scales except the output range is continuous and numeric
+            const yScale = d3.scaleBand()
+                .domain(data.map(yValue))
+                .range([0, height])
+                .padding(0.1)
 
-          const yAxisG = g.append("g")
-              .call(d3.axisLeft(yScale).tickSizeOuter(0))
+            // Specify the design of the group of elements for the yAxis
+            // SOURCE: https://github.com/d3/d3-axis
+            const yAxisG = g.append("g")
+                .call(d3.axisLeft(yScale).tickSizeOuter(0))
 
-          yAxisG.selectAll(".domain, .tick line").remove()
+            // remove the domain and tick lines
+            yAxisG.selectAll(".domain, .tick line").remove()
 
-          yAxisG.append("text")
-              .attr("class", "axis-label")
-              .attr("text-anchor", "middle")
-              .attr("transform", "rotate(-90)")
-              .attr("y", -margin.left + 20)
-              .attr("x", -height / 2)//-margin.top - 360)
-              .attr("fill", "black")
-              .text("State")
+            // Append text to the y-axis to serve as the axis label
+            yAxisG.append("text")
+                .attr("class", "axis-label")
+                .attr("text-anchor", "middle")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -margin.left + 20)
+                .attr("x", -height / 2)//-margin.top - 360)
+                .attr("fill", "black")
+                .text("State")
 
-          const xAxisG = g.append("g")
-              .call(d3.axisBottom(xScale).tickSizeOuter(0))
-              .attr("transform", `translate(0,${height})`)
+            // Specify the design of the group of elements for the xAxis
+            // SOURCE: https://github.com/d3/d3-axis
+            const xAxisG = g.append("g")
+                .call(d3.axisBottom(xScale).tickSizeOuter(0))
+                .attr("transform", `translate(0,${height})`)
 
-          xAxisG.select(".domain").remove()
+            // remove the domain line
+            xAxisG.select(".domain").remove()
 
-          xAxisG.append("text")
-              .attr("class", "axis-label")
-              .attr("text-anchor", "middle")
-              .attr("x", width / 2)
-              .attr("y", 50)
-              .attr("fill", "black")
-              .text("Number of Users")
+            // Append text to the x-axis to serve as the axis label
+            xAxisG.append("text")
+                .attr("class", "axis-label")
+                .attr("text-anchor", "middle")
+                .attr("x", width / 2)
+                .attr("y", 50)
+                .attr("fill", "black")
+                .text("Number of Users")
 
-          // initial create rects with no width
-          // extend them to full width with next block of transition code
-          g.selectAll("rect")
+            // Initially, create rects WITH NO WIDTH for each object in the dataset
+            // After transition delay, extend them to full width (next code block)
+            g.selectAll("rect")
+                .data(data)
+                .join("rect")
+                .attr("y", d => yScale(yValue(d)))
+                .attr("width", d => xScale(0))
+                .attr("height", yScale.bandwidth())
+
+            // Transition from bars with no width to bars with full width after 800 ms
+            g.selectAll("rect")
+                .transition()
+                .duration(800)
+                .attr("y", d => yScale(yValue(d)))
+                .attr("width", d => xScale(xValue(d)))
+
+            // SOURCE: https://github.com/d3/d3-axis#axis_tickFormat
+            // SOURCE: https://github.com/d3/d3-format
+            const format = xScale.tickFormat(3)
+
+            // Append a group of text elements with the value of each bar
+            // appended at the end of each bar
+            g.append("g")
+                .attr("fill", "white")
+                .attr("text-anchor", "end")
+                .style("font", "9px sans-serif")
+              .selectAll("text")
               .data(data)
-              .join("rect")
-              .attr("y", d => yScale(yValue(d)))
-              .attr("width", d => xScale(0))
-              .attr("height", yScale.bandwidth())
+              .join("text")
+                .attr("x", d => xScale(xValue(d)) - 4)
+                .attr("y", d => yScale(yValue(d)) + yScale.bandwidth() / 2)
+                .attr("dy", "0.35em") // SOURCE: https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/dy
+                .text(d => format(xValue(d)))
 
-          // transition from no bars to full bars after 800 ms
-          g.selectAll("rect")
-              .transition()
-              .duration(800)
-              .attr("y", d => yScale(yValue(d)))
-              .attr("width", d => xScale(xValue(d)))
-
-          const format = xScale.tickFormat(3)
-
-          g.append("g")
-              .attr("fill", "white")
-              .attr("text-anchor", "end")
-              .style("font", "9px sans-serif")
-            .selectAll("text")
-            .data(data)
-            .join("text")
-              .attr("x", d => xScale(xValue(d)) - 4)
-              .attr("y", d => yScale(yValue(d)) + yScale.bandwidth() / 2)
-              .attr("dy", "0.35em")
-              .text(d => format(xValue(d)))
-
-          g.append("text")
-              .attr("class", "title")
-              .attr("text-anchor", "middle")
-              .attr("x", width / 2)
-              .attr("y", -10)
-              .text("Number of Users per State")
+            // Append text to the chart to serve as the title
+            g.append("text")
+                .attr("class", "title")
+                .attr("text-anchor", "middle")
+                .attr("x", width / 2)
+                .attr("y", -10)
+                .text("Number of Users per State")
         }
 
-  			d3.csv("randomuser5000.csv")
+        // SOURCE: https://observablehq.com/@dakoop/reading-in-data-learn-js-data
+  			d3.csv("randomuser5000.csv", d3.autoType)
           .then((data) => {
-            var stateCounts = d3.nest()
+
+            // Group the data by state and count the number of observations per group; Sort descending
+            // SOURCE: https://observablehq.com/@dakoop/grouping-data-learn-js-data
+            const stateCounts = d3.nest()
               .key(d => capitalize(d["location.state"]))
               .rollup(v => v.length)
               .entries(data)
               .sort((a, b) => b.value - a.value)
 
-            // console.log(stateCounts)
+            console.log(stateCounts)
             render(stateCounts)
+
           })
           .catch(function(error){
              // handle error
