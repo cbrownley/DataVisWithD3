@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
     <title>Scales</title>
-
     <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
     <script src="https://d3js.org/d3.v5.min.js"></script>
-
     <style>
         body {
           font: 11px sans-serif;
@@ -58,27 +56,38 @@
               height = innerHeight - padding.top - padding.bottom       // 340 = 460 - 60 - 60
 
         const dataset = [
-            							[5, 20], [480, 90], [250, 50], [100, 33], [330, 95],
-            							[410, 12], [475, 44], [25, 67], [85, 21], [220, 88],
-            							[600, 150]
-                        ]
+          [5, 20], [480, 90], [250, 50], [100, 33], [330, 95],
+          [410, 12], [475, 44], [25, 67], [85, 21], [220, 88],
+          [600, 150]
+        ]
+        console.log(dataset)
 
+        // Functions that return the first (x) and second (y) values
+        // in each pair of values in the dataset
         const xValue = d => d[0]
         const yValue = d => d[1]
+
+        // Specify the x and y domains using the minimum and maximum
+        // x and y values in the dataset; Add and subtract 10 to extend
+        // the domain beyond the range of the data
         const xDomain = [d3.min(dataset, xValue)-10, d3.max(dataset, xValue)+10]
         const yDomain = [d3.min(dataset, yValue)-10, d3.max(dataset, yValue)+10]
 
         // SOURCE: https://github.com/d3/d3-scale
+        // Minimum in x domain corresponds to 0; Maximum in x domain corresponds to width
         const xScale = d3.scaleLinear()
             .domain(xDomain)
             .range([0, width])
             .nice() // extends the domain so that it starts and ends on nice round values
 
+        // Minimum in y domain corresponds to height (bottom); Maximum in y domain corresponds to 0 (top)
         const yScale = d3.scaleLinear()
             .domain(yDomain)
             .range([height, 0])
-            .nice()
+            .nice()  // extends the domain so that it starts and ends on nice round values
 
+        // Radius domain extends from 0 to the maximum y value in the dataset
+        // Radius range extends from 4 to 12
         const rScale = d3.scaleLinear()
             .domain([0, d3.max(dataset, yValue)])
             .range([4, 12])
@@ -134,7 +143,7 @@
             .attr("transform", `translate(0, ${height})`)
             .call(xAxis);
 
-        // Append a group for the y-axis, shift it to the right side
+        // Append a group for the y-axis
         g.append("g")
             .attr("class", "y axis")
             .attr("transform", `translate(0, 0)`)
