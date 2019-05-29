@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>Scatter Plot</title>
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+
+    <style>
+      text {
+        font: 11pt sans-serif;
+        font-family: 'Open Sans', sans-serif;
+      }
+
+      .title {
+        font-size: 20pt;
+        font-weight: bold;
+      }
+
+      circle {
+        fill: steelblue;
+        stroke: darkblue;
+        opacity: 0.5;
+      }
+
+      .axis path,
+      .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+        stroke-width: 1px;
+      }
+
+      .axis-label {
+        font-size: 16pt;
+        font-weight: bold;
+      }
+
+    </style>
+  </head>
+  <body>
+		<script type="text/javascript">
+
+        const capitalize = (str) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase())
+
+        const outerWidth = 750,
+              outerHeight = 500,
+              margin = ({top: 40, right: 20, bottom: 60, left: 70}),
+              width  = outerWidth - margin.left - margin.right,
+              height = outerHeight - margin.top - margin.bottom
+
+        // Append an SVG to body with outerWidth and outerHeight
+        const svg = d3.select("body").append("svg")
+            .attr("width", outerWidth)
+            .attr("height", outerHeight)
+
+        const render = data => {
+
+          const xValue = d => d.distance
+          const yValue = d => d.arr_delay
+          const xAxisLabel = "Distance"
+          const yAxisLabel = "Arrival Delay"
+          const title = `Relationship between ${xAxisLabel} and ${yAxisLabel}`
+          const circleRadius = 6
+
+          const xScale = d3.scaleLinear()
+              .domain(d3.extent(data, xValue))
+              .range([0, width])
+              .nice()
+
+          const yScale = d3.scaleLinear()
+              .domain(d3.extent(data, yValue))
+              .range([height, 0])
+              .nice()
+
+          const g = svg.append("g")
+              .attr("transform", `translate(${margin.left},${margin.top})`)
+
+          const yAxisG = g.append("g")
+              .call(d3.axisLeft(yScale).tickSizeOuter(0))
+
+          yAxisG.append("text")
+              .attr("class", "axis-label")
+              .attr("text-anchor", "middle")
+              .attr("transform", "rotate(-90)")
+              .attr("y", -margin.left + 20)
+              .attr("x", -height / 2)
+              .attr("fill", "black")
+              .text(yAxisLabel)
+
+          const xAxisTickFormat = number =>
+              d3.format(".2s")(number)
+                  .replace("G", "B")
+
+          const xAxisG = g.append("g")
+              .call(d3.axisBottom(xScale).tickSizeOuter(0))
+              .attr("transform", `translate(0,${height})`)
+
+          xAxisG.append("text")
+              .attr("class", "axis-label")
+              .attr("text-anchor", "middle")
+              .attr("x", width / 2)
+              .attr("y", 50)
+              .attr("fill", "black")
+              .text(xAxisLabel)
+
+          g.selectAll("circle").data(data)
+              .enter().append("circle")
+              .attr("cy", d => yScale(yValue(d)))
+              .attr("cx", d => xScale(xValue(d)))
+              .attr("r", circleRadius)
+
+          g.append("text")
+              .attr("class", "title")
+              .attr("x", margin.left)
+              .attr("y", -20)
+              .text(title)
+        }
+
+  			d3.csv("flights.csv")
+          .then((flights) => {
+
+            flights.forEach(d => {
+              d.distance = +d.distance
+              d.arr_delay = +d.arr_delay
+              d.time_hour = new Date(d.time_hour)
+              d.year = new Date(d.year)
+            })
+
+            const sampleSize = 500
+            const mask = d => (d.arr_delay < 100) && (d.distance < 1000)
+            return sample = flights.filter(mask).slice(0,sampleSize)
+
+          })
+          .then((sample) => {
+            console.log(sample)
+            render(sample)
+
+          })
+          .catch(function(error){
+             // handle error
+             console.log(error)
+          })
+
+		</script>
+	</body>
+</html>

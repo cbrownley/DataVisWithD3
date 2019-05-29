@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>Scales</title>
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+
+    <style>
+        body {
+          font: 11px sans-serif;
+        }
+        circle {
+          fill: steelblue;
+          stroke: #000;
+        }
+        .coordinates {
+          font-family: sans-serif;
+          font-size: 11px;
+          font-weight: bold;
+          fill: red;
+        }
+        .axis line,
+        .axis path {
+          fill: none;
+          stroke: #000;
+          shape-rendering: crispEdges;
+        }
+        .outer,
+        .inner {
+          shape-rendering: crispEdges;
+        }
+        .outer {
+          fill: none;
+          stroke: #000;
+        }
+        .inner {
+          fill: #ccc;
+          stroke: #000;
+          stroke-dasharray: 3, 4;
+        }
+    </style>
+  </head>
+  <body>
+    <script>
+        // SOURCE: https://alignedleft.com/tutorials/d3/scales
+        // SOURCE: https://bl.ocks.org/mbostock/3019563
+        const margin  = {top: 20, right: 20, bottom: 20, left: 20},
+              padding = {top: 60, right: 60, bottom: 60, left: 60},
+              outerWidth  = 960,
+              outerHeight = 500,
+              innerWidth  = outerWidth - margin.left - margin.right,    // 920 = 960 - 20 - 20
+              innerHeight = outerHeight - margin.top - margin.bottom,   // 460 = 500 - 20 - 20
+              width  = innerWidth - padding.left - padding.right,       // 800 = 920 - 60 - 60
+              height = innerHeight - padding.top - padding.bottom       // 340 = 460 - 60 - 60
+
+        const dataset = [
+            							[5, 20], [480, 90], [250, 50], [100, 33], [330, 95],
+            							[410, 12], [475, 44], [25, 67], [85, 21], [220, 88],
+            							[600, 150]
+                        ]
+
+        const xValue = d => d[0]
+        const yValue = d => d[1]
+        const xDomain = [d3.min(dataset, xValue)-10, d3.max(dataset, xValue)+10]
+        const yDomain = [d3.min(dataset, yValue)-10, d3.max(dataset, yValue)+10]
+
+        // SOURCE: https://github.com/d3/d3-scale
+        const xScale = d3.scaleLinear()
+            .domain(xDomain)
+            .range([0, width])
+            .nice() // extends the domain so that it starts and ends on nice round values
+
+        const yScale = d3.scaleLinear()
+            .domain(yDomain)
+            .range([height, 0])
+            .nice()
+
+        const rScale = d3.scaleLinear()
+            .domain([0, d3.max(dataset, yValue)])
+            .range([4, 12])
+
+        // SOURCE: https://github.com/d3/d3-axis
+        const xAxis = d3.axisBottom(xScale)
+        const yAxis = d3.axisLeft(yScale)
+
+        // Append an SVG to body with outerWidth and outerHeight
+        // Append a group, shifted by margin.left and margin.top
+        const svg = d3.select("body").append("svg")
+            .attr("width", outerWidth)
+            .attr("height", outerHeight)
+          .append("g")
+            .attr("transform", `translate(${margin.left}, ${margin.top})`)
+
+        // Append a rect with innerWidth and inner Height, and class = outer
+        svg.append("rect")
+            .attr("class", "outer")
+            .attr("width", innerWidth)
+            .attr("height", innerHeight);
+
+        // Append a group, shifted by padding.left and padding.top
+        const g = svg.append("g")
+            .attr("transform", `translate(${padding.left}, ${padding.top})`)
+
+        // Append a rect with width and height, and class = inner
+        g.append("rect")
+            .attr("class", "inner")
+            .attr("width", width)
+            .attr("height", height)
+
+        // Reference (old): https://bost.ocks.org/mike/join/
+        // Reference (new): https://observablehq.com/@d3/selection-join
+        g.selectAll("circle") // select multiple descendants for each selected element
+            .data(dataset)
+            .join("circle")
+            .attr("cx", d => xScale(xValue(d)))
+            .attr("cy", d => yScale(yValue(d)))
+            .attr("r" , d => rScale(yValue(d)))
+
+        g.selectAll("text")
+            .data(dataset)
+            .join("text")
+            .attr("class", "coordinates")
+            .attr("x", d => xScale(xValue(d)+12))
+            .attr("y", d => yScale(yValue(d)))
+            .text(d => `${d[0]}, ${d[1]}`)
+
+        // Append a group for the x-axis, shift it to the bottom
+        g.append("g")
+            .attr("class", "x axis")
+            .attr("transform", `translate(0, ${height})`)
+            .call(xAxis);
+
+        // Append a group for the y-axis, shift it to the right side
+        g.append("g")
+            .attr("class", "y axis")
+            .attr("transform", `translate(0, 0)`)
+            .call(yAxis)
+
+    </script>
+	</body>
+</html>

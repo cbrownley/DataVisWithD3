@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>Scatter Plot</title>
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+
+    <style>
+      text {
+        font: 11pt sans-serif;
+        font-family: 'Open Sans', sans-serif;
+      }
+
+      .title {
+        font-size: 24pt;
+        font-weight: bold;
+      }
+
+      circle {
+        fill: steelblue
+      }
+
+      .axis path,
+      .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+        stroke-width: 1px;
+      }
+
+      .axis-label {
+        font-size: 16pt;
+        font-weight: bold;
+      }
+
+    </style>
+  </head>
+  <body>
+		<script type="text/javascript">
+
+        const capitalize = (str) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase())
+
+        const outerWidth = 960,
+              outerHeight = 1000,
+              margin = ({top: 40, right: 20, bottom: 60, left: 150}),
+              width  = outerWidth - margin.left - margin.right,
+              height = outerHeight - margin.top - margin.bottom
+
+        // Append an SVG to body with outerWidth and outerHeight
+        const svg = d3.select("body").append("svg")
+            .attr("width", outerWidth)
+            .attr("height", outerHeight)
+
+        const render = data => {
+
+          const xValue = d => d.value
+          const yValue = d => d.key
+
+          const xScale = d3.scaleLinear()
+              .domain([0, d3.max(data, xValue)])
+              .range([0, width])
+              .nice()
+
+          const yScale = d3.scalePoint()
+              .domain(data.map(yValue))
+              .range([0, height])
+              .padding(0.2)
+
+          const g = svg.append("g")
+              .attr("transform", `translate(${margin.left},${margin.top})`)
+
+          const yAxisG = g.append("g")
+              .call(d3.axisLeft(yScale)
+                  .tickSize(-width)
+                  .tickSizeOuter(0))
+
+          yAxisG.selectAll(".domain").remove()
+
+          yAxisG.append("text")
+              .attr("class", "axis-label")
+              .attr("text-anchor", "middle")
+              .attr("transform", "rotate(-90)")
+              .attr("y", -margin.left + 20)
+              .attr("x", -height / 2)//-margin.top - 360)
+              .attr("fill", "black")
+              .text("State")
+
+          const xAxisTickFormat = number =>
+              d3.format(".2s")(number)
+                  .replace("G", "B")
+
+          const xAxisG = g.append("g")
+              .call(d3.axisBottom(xScale)
+                  .tickFormat(xAxisTickFormat)
+                  //.tickSize(height)
+                  .tickSizeOuter(0))
+              .attr("transform", `translate(0,${height})`)
+
+          xAxisG.select(".domain").remove()
+
+          xAxisG.append("text")
+              .attr("class", "axis-label")
+              .attr("text-anchor", "middle")
+              .attr("x", width / 2)
+              .attr("y", 50)
+              .attr("fill", "black")
+              .text("Number of Users")
+
+          g.selectAll("circle").data(data)
+              .enter().append("circle")
+              .attr("cy", d => yScale(yValue(d)))
+              .attr("cx", d => xScale(xValue(d)))
+              .attr("r", 9)
+
+          const format = xScale.tickFormat(20)
+
+          /*g.append("g")
+              .attr("fill", "white")
+              .attr("text-anchor", "end")
+              .style("font", "9px sans-serif")
+            .selectAll("text")
+            .data(data)
+            .join("text")
+              .attr("x", d => xScale(xValue(d)) - 4)
+              .attr("y", d => yScale(yValue(d)) + yScale.bandwidth() / 2)
+              .attr("dy", "0.35em")
+              .text(d => format(xValue(d)))*/
+
+          g.append("text")
+              .attr("class", "title")
+              .attr("x", margin.left)
+              .attr("y", -10)
+              .text("Number of Users per State")
+        }
+
+  			d3.csv("randomuser5000.csv")
+          .then((data) => {
+            var stateCounts = d3.nest()
+              .key(d => capitalize(d["location.state"]))
+              .rollup(v => v.length * 10000000)
+              .entries(data)
+              .sort((a, b) => b.value - a.value)
+
+            // console.log(stateCounts)
+            render(stateCounts)
+          })
+          .catch(function(error){
+             // handle error
+             console.log(error)
+          })
+
+		</script>
+	</body>
+</html>

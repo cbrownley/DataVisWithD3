@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>Margins</title>
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+
+    <style>
+        body {
+          font: 10px sans-serif;
+        }
+        .axis line,
+        .axis path {
+          fill: none;
+          stroke: #000;
+          shape-rendering: crispEdges;
+        }
+        .outer,
+        .inner {
+          shape-rendering: crispEdges;
+        }
+        .outer {
+          fill: none;
+          stroke: #000;
+        }
+        .inner {
+          fill: #ccc;
+          stroke: #000;
+          stroke-dasharray: 3, 4;
+        }
+    </style>
+  </head>
+  <body>
+    <script>
+        // SOURCE: https://bl.ocks.org/mbostock/3019563
+        const margin = {top: 20, right: 20, bottom: 20, left: 20},
+          padding = {top: 60, right: 60, bottom: 60, left: 60},
+          outerWidth = 960,
+          outerHeight = 500,
+          innerWidth = outerWidth - margin.left - margin.right,    // 920 = 960 - 20 - 20
+          innerHeight = outerHeight - margin.top - margin.bottom,  // 460 = 500 - 20 - 20
+          width = innerWidth - padding.left - padding.right,       // 800 = 920 - 60 - 60
+          height = innerHeight - padding.top - padding.bottom      // 340 = 460 - 60 - 60
+
+        // SOURCE: https://github.com/d3/d3-scale#identity-scales
+        // scaleIdentity: a special case of linear scales where the domain and range are identical
+        const xScale = d3.scaleIdentity()
+            .domain([0, width]);
+
+        // SOURCE: https://github.com/d3/d3-scale#identity-scales
+        // scaleIdentity: a special case of linear scales where the domain and range are identical
+        const yScale = d3.scaleIdentity()
+            .domain([0, height]);
+
+        // SOURCE: https://github.com/d3/d3-axis#axisBottom
+        // axisBottom: constructs a bottom-oriented axis generator for the given scale
+        const xAxis = d3.axisBottom(xScale)
+
+        // SOURCE: https://github.com/d3/d3-axis#axisRight
+        // axisRight: constructs a right-oriented axis generator for the given sclae
+        const yAxis = d3.axisRight(yScale)
+
+        // Append an SVG to body with outerWidth and outerHeight
+        // Append a group, shifted by margin.left and margin.top
+        const svg = d3.select("body").append("svg")
+            .attr("width", outerWidth)
+            .attr("height", outerHeight)
+          .append("g")
+            .attr("transform", `translate(${margin.left}, ${margin.top})`)
+
+        // Append a rect with innerWidth and inner Height, and class = outer
+        svg.append("rect")
+            .attr("class", "outer")
+            .attr("width", innerWidth)
+            .attr("height", innerHeight)
+
+        // Append a group, shifted by padding.left and padding.top
+        const g = svg.append("g")
+            .attr("transform", `translate(${padding.left}, ${padding.top})`)
+
+        // Append a rect with width and height, and class = inner
+        g.append("rect")
+            .attr("class", "inner")
+            .attr("width", width)
+            .attr("height", height)
+
+        // Append a group for the x-axis, shift it to the bottom
+        g.append("g")
+            .attr("class", "x axis")
+            .attr("transform", `translate(0, ${height})`)
+            .call(xAxis)
+
+        // Append a group for the y-axis, shift it to the right side
+        g.append("g")
+            .attr("class", "y axis")
+            .attr("transform", `translate(${width}, 0)`)
+            .call(yAxis)
+
+    </script>
+	</body>
+</html>

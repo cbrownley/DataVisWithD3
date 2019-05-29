@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>Line Plot</title>
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+
+    <style>
+      text {
+        font: 11pt sans-serif;
+        font-family: 'Open Sans', sans-serif;
+      }
+      .title {
+        font-size: 20pt;
+        font-weight: bold;
+        text-anchor: middle;
+      }
+      .line-path {
+        fill: none;
+        stroke: steelblue;
+        stroke-width: 1.5;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+      }
+      .axis path,
+      .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+        stroke-width: 1px;
+      }
+      .axis-label {
+        font-size: 16pt;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Create an svg for the chart -->
+    <svg width="750" height="500"></svg>
+
+		<script type="text/javascript">
+
+        const capitalize = (str) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase())
+        const pad = (n) => n < 10 ? '0'+n : n
+        const createDate = (d) => {
+            let date = d.getDate()
+            let month = d.getMonth()
+            let year = d.getFullYear()
+            let yyyymmdd = `${year}-${pad(month + 1)}-${pad(date)}`
+            return yyyymmdd
+        }
+        const parseTime = d3.timeParse("%Y-%m-%d")
+
+        const svg = d3.select("svg")
+
+        const width = +svg.attr("width")
+        const height = +svg.attr("height")
+
+        const render = data => {
+
+          const xValue = d => parseTime(d.key)
+          const yValue = d => +d.value
+          const xAxisLabel = "Time"
+          const yAxisLabel = "Number of Flights"
+          const title = `${yAxisLabel} over ${xAxisLabel}`
+          const circleRadius = 6
+
+          const margin = ({top: 40, right: 20, bottom: 60, left: 70})
+          const innerWidth = width - margin.left - margin.right
+          const innerHeight = height - margin.top - margin.bottom
+
+          const xScale = d3.scaleTime()
+              .domain(d3.extent(data, xValue))
+              .range([0, innerWidth])
+              .nice()
+
+          const yScale = d3.scaleLinear()
+              .domain([0, d3.max(data, yValue)])
+              .range([innerHeight, 0])
+              .nice()
+
+          const g = svg.append("g")
+              .attr("transform", `translate(${margin.left},${margin.top})`)
+
+          const xAxisG = g.append("g")
+              .call(d3.axisBottom(xScale)
+                      .ticks(innerWidth / 100)
+                      .tickSizeOuter(0))
+              .attr("transform", `translate(0,${innerHeight})`)
+
+          xAxisG.append("text")
+              .attr("class", "axis-label")
+              .attr("text-anchor", "middle")
+              .attr("x", innerWidth / 2)
+              .attr("y", 50)
+              .attr("fill", "black")
+              .text(xAxisLabel)
+
+          const yAxisG = g.append("g")
+              .call(d3.axisLeft(yScale)
+                      .ticks(5)
+                      .tickSizeOuter(0))
+
+          yAxisG.append("text")
+              .attr("class", "axis-label")
+              .attr("text-anchor", "middle")
+              .attr("transform", "rotate(-90)")
+              .attr("y", -margin.left + 20)
+              .attr("x", -innerHeight / 2)
+              .attr("fill", "black")
+              .text(yAxisLabel)
+
+          const lineGenerator = d3.line()
+              .defined(d => !isNaN(yValue(d)))
+              .x(d => xScale(xValue(d)))
+              .y(d => yScale(yValue(d)))
+              .curve(d3.curveMonotoneX)
+
+          g.append("path")
+              .datum(data)
+              .attr("class", "line-path")
+              .attr("d", lineGenerator(data))
+
+          g.append("text")
+              .attr("class", "title")
+              .attr("x", innerWidth / 2)
+              .attr("y", -20)
+              .text(title)
+        }
+
+  			d3.csv("flights.csv")
+          .then((flights) => {
+
+            flights.forEach(d => {
+              d.distance = +d.distance
+              d.arr_delay = +d.arr_delay
+              d.time_hour = createDate(new Date(d.time_hour))
+            })
+
+            const flightsPerYear = d3.nest()
+              .key(d => d.time_hour)
+              .rollup(v => v.length)
+              .entries(flights)
+              .sort((a, b) => new Date(a.key) - new Date(b.key))
+
+            console.log(flightsPerYear)
+            render(flightsPerYear)
+          })
+          .catch(function(error){
+             // handle error
+             console.log(error)
+          })
+
+		</script>
+	</body>
+</html>

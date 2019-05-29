@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>Multi-Line Chart</title>
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+
+    <style>
+      text {
+        font: 11pt sans-serif;
+        font-family: 'Open Sans', sans-serif;
+      }
+      .title {
+        font-size: 16pt;
+        font-weight: bold;
+        text-anchor: middle;
+      }
+      .line-path {
+        fill: none;
+        stroke-width: 3;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+        mix-blend-mode: multiply;
+      }
+      .axis path,
+      .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+        stroke-width: 1px;
+      }
+      .axis-label {
+        font-size: 14pt;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Create an svg for the chart -->
+    <svg width="750" height="500"></svg>
+
+		<script type="text/javascript">
+
+        const capitalize = (str) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase())
+        const pad = (n) => n < 10 ? '0'+n : n
+        const createDate = (d) => {
+            let date = d.getDate()
+            let month = d.getMonth()
+            let year = d.getFullYear()
+            let yyyymmdd = `${year}-${pad(month + 1)}-${pad(date)}`
+            return yyyymmdd
+        }
+        const parseTime = d3.timeParse("%Y-%m-%d")
+
+        //SOURCE: https://medium.com/dailyjs/rewriting-javascript-converting-an-array-of-objects-to-an-object-ec579cafbfc7
+        //const arrayToObject = (arr, keyField) => Object.assign({}, ...arr.map(item => ({[item[keyField]]: item})))
+        const arrayToObject = (array) =>
+           array.reduce((obj, item) => {
+             obj[item.id] = item
+             return obj
+           }, {})
+
+        // SOURCE: https://medium.com/front-end-weekly/immutably-rename-object-keys-in-javascript-5f6353c7b6dd
+        const renameProp = (
+          oldProp,
+          newProp,
+          { [oldProp]: old, ...others }
+        ) => {
+          return {
+            [newProp]: old,
+            ...others
+          }
+        }
+
+        const round = (num, dec=2) => Math.floor(num * Math.pow(10, dec)) / Math.pow(10, dec)
+
+        const svg = d3.select("svg")
+
+        const width = +svg.attr("width")
+        const height = +svg.attr("height")
+
+        const render = data => {
+
+          const xValue = d => parseTime(d.date)
+          const yValue = d => d.avg_dep_delay
+          const xAxisLabel = "Time"
+          const yAxisLabel = "Average Departure Delay (minutes)"
+          const title = `${yAxisLabel} over ${xAxisLabel} by Carrier`
+          const circleRadius = 6
+          const colorValue = d => d.carrier
+
+          const margin = ({top: 40, right: 20, bottom: 60, left: 70})
+          const innerWidth = width - margin.left - margin.right
+          const innerHeight = height - margin.top - margin.bottom
+
+          //SOURCE: https://momentjs.com/docs/#/manipulating/subtract/
+          //console.log(`${moment(d3.min(data, xValue))} ${moment(d3.max(data, xValue))}`)
+          //console.log(`${moment(d3.min(data, xValue)).subtract(1, 'months')} ${moment(d3.max(data, xValue)).add(1, 'months')}`)
+          const priorMonth = moment(d3.min(data, xValue)).subtract(1, 'months')
+          const nextMonth = moment(d3.max(data, xValue)).add(1, 'months')
+          const xScale = d3.scaleTime()
+              .domain([priorMonth, nextMonth]) //d3.extent(data, xValue))
+              .range([0, innerWidth])
+              .nice()
+
+          const yScale = d3.scaleLinear()
+              .domain([0, d3.max(data, d => d.avg_dep_delay)]) //d3.extent(data, yValue))
+              .range([innerHeight, 0])
+              .nice()
+
+          const colorScale = d3.scaleOrdinal(d3.schemeCategory10)
+
+          const g = svg.append("g")
+              .attr("transform", `translate(${margin.left},${margin.top})`)
+
+          const xAxisG = g.append("g")
+              .call(d3.axisBottom(xScale)
+                  //SOURCE: http://www.d3noob.org/2016/08/changing-number-of-ticks-on-axis-in.html
+                  .ticks(d3.timeMonth.every(2))
+                  .tickSizeOuter(0))
+              .attr("transform", `translate(0,${innerHeight})`)
+
+          xAxisG.append("text")
+              .attr("class", "axis-label")
+              .attr("text-anchor", "middle")
+              .attr("x", innerWidth / 2)
+              .attr("y", 50)
+              .attr("fill", "black")
+              .text(xAxisLabel)
+
+          const yAxisG = g.append("g")
+              .call(d3.axisLeft(yScale)
+                  .ticks(7)
+                  .tickSizeOuter(0))
+
+          yAxisG.append("text")
+              .attr("class", "axis-label")
+              .attr("text-anchor", "middle")
+              .attr("transform", "rotate(-90)")
+              .attr("y", -margin.left + 20)
+              .attr("x", -innerHeight / 2)
+              .attr("fill", "black")
+              .text(yAxisLabel)
+
+          const lineGenerator = d3.line()
+              .defined(d => !isNaN(yValue(d)))
+              .x(d => xScale(xValue(d)))
+              .y(d => yScale(yValue(d)))
+              .curve(d3.curveBasis)
+
+          const lastYValue = d =>
+              yValue(d.values[d.values.length - 1])
+
+          const nested = d3.nest()
+              .key(colorValue)
+              .entries(data)
+              .sort((a, b) =>
+                  d3.descending(lastYValue(a), lastYValue(b))
+              )
+          console.log(nested)
+
+          colorScale.domain(nested.map(d => d.key))
+
+          g.selectAll(".line-path")
+              .data(nested)
+              .enter()
+              .append("path")
+              .attr("class", "line-path")
+              .attr("d", d => lineGenerator(d.values))
+              .attr("stroke", d => colorScale(d.key))
+
+          g.append("text")
+              .attr("class", "title")
+              .attr("x", innerWidth / 2)
+              .attr("y", -20)
+              .text(title)
+
+          g.selectAll("mydots")
+              .data(nested)
+              .enter()
+              .append("circle")
+                  .attr("cx", innerWidth - 20)
+                  .attr("cy", function(d,i){ return 140 + i*25}) // 160 is where the first dot appears. 25 is the distance between dots
+                  .attr("r", 7)
+                  .style("fill", d => colorScale(d.key))
+
+          g.selectAll("mylabels")
+            .data(nested)
+            .enter()
+            .append("text")
+              .attr("x", innerWidth - 10)
+              .attr("y", function(d,i){ return 140 + i*25}) // 160 is where the first dot appears. 25 is the distance between dots
+              .style("fill", d => colorScale(d.key))
+              .text(d => d.key)
+              .attr("text-anchor", "left")
+              .style("alignment-baseline", "middle")
+        }
+
+  			d3.csv("flights.csv")
+          .then((flights) => {
+
+            const someCarriers = flights.filter(entry =>
+                entry.carrier == "AA" || entry.carrier == "DL" ||
+                entry.carrier == "UA" || entry.carrier == "US")
+
+            someCarriers.forEach(d => {
+              d.air_time = +d.air_time
+              d.arr_delay = +d.arr_delay
+              d.day = +d.day
+              d.dep_delay = +d.dep_delay
+              d.distance = +d.distance
+              d.hour = +d.hour
+              d.minute = +d.minute
+              d.month = +d.month
+              d.year = +d.year
+              d.time_hour = new Date(d.time_hour)
+              d.year_month = createDate(new Date(+d.year, +d.month-1))
+            })
+            //console.log(someCarriers[0])
+
+            const posDepDelay = someCarriers.filter(e => e.dep_delay > 0)
+
+            const flightsByCarrier = d3.nest()
+              .key(d => d.year_month)
+              .key(d => d.carrier)
+              .rollup(v => d3.mean(v, d => d.dep_delay))
+              .entries(posDepDelay)
+              .sort((a, b) => new Date(a.key) - new Date(b.key))
+              //.map(e => console.log(e))
+              .map(g => g['values'].map(obj => {
+                            obj['date'] = g['key']
+                            return obj
+                        })
+                      )
+            //console.log(flightsByCarrier)
+
+            const flightsByCarrierFlat = [].concat.apply([], flightsByCarrier)
+              .map(e => renameProp('key', 'carrier', e))
+              .map(e => renameProp('value', 'avg_dep_delay', e))
+
+            flightsByCarrierFlat.forEach( d => d.avg_dep_delay = round(d.avg_dep_delay,3) )
+
+            console.log(flightsByCarrierFlat)
+            render(flightsByCarrierFlat)
+          })
+          .catch(function(error){
+             // handle error
+             console.log(error)
+          })
+
+		</script>
+	</body>
+</html>

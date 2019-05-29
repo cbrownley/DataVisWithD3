@@ -1,0 +1,25 @@
+text {
+  font: 11pt sans-serif;
+  font-family: 'Open Sans', sans-serif;
+}
+
+.title {
+  font-size: 24pt;
+  font-weight: bold;
+}
+
+rect {
+  fill: steelblue
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.axis-label {
+  font-size: 16pt;
+  font-weight: bold;
+}

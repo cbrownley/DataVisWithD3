@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>Scatter Plot</title>
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+
+    <style>
+      text {
+        font: 11pt sans-serif;
+        font-family: 'Open Sans', sans-serif;
+      }
+
+      .title {
+        font-size: 20pt;
+        font-weight: bold;
+      }
+
+      circle {
+        stroke: black;
+        opacity: 0.5;
+      }
+
+      .axis path,
+      .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+        stroke-width: 1px;
+      }
+
+      .axis-label {
+        font-size: 16pt;
+        font-weight: bold;
+      }
+
+    </style>
+  </head>
+  <body>
+		<script type="text/javascript">
+
+        const capitalize = (str) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase())
+
+        const outerWidth = 750,
+              outerHeight = 500,
+              margin = ({top: 40, right: 120, bottom: 60, left: 70}),
+              width  = outerWidth - margin.left - margin.right,
+              height = outerHeight - margin.top - margin.bottom
+
+        // Append an SVG to body with outerWidth and outerHeight
+        const svg = d3.select("body").append("svg")
+            .attr("width", outerWidth)
+            .attr("height", outerHeight)
+
+        const render = data => {
+
+          const xColumn = d => d.distance
+          const yColumn = d => d.arr_delay
+          const colorColumn = d => d.origin
+          const circleSizeColumn = d => d.carrierCount
+          const xAxisLabel = "Distance"
+          const yAxisLabel = "Arrival Delay"
+          const title = `Relationship between ${xAxisLabel} and ${yAxisLabel}`
+          const rMin = 4 // "r" stands for radius
+          const rMax = 12
+
+          //const margin = ({top: 40, right: 120, bottom: 60, left: 70})
+          //const innerWidth = width - margin.left - margin.right
+          //const innerHeight = height - margin.top - margin.bottom
+
+          const xScale = d3.scaleLinear()
+              .domain(d3.extent(data, xColumn))
+              .range([0, width])
+              .nice()
+
+          const yScale = d3.scaleLinear()
+              .domain(d3.extent(data, yColumn))
+              .range([height, 0])
+              .nice()
+
+          const colorScale = d3.scaleOrdinal()
+              .domain(data.map(colorColumn))
+              .range(d3.schemeCategory10)
+
+          const circleSizeScale = d3.scaleSqrt()
+              .domain(d3.extent(data.map(circleSizeColumn)))
+              .range([rMin, rMax])
+
+          const g = svg.append("g")
+              .attr("transform", `translate(${margin.left},${margin.top})`)
+
+          const yAxisG = g.append("g")
+              .call(d3.axisLeft(yScale).tickSizeOuter(0))
+
+          yAxisG.append("text")
+              .attr("class", "axis-label")
+              .attr("text-anchor", "middle")
+              .attr("transform", "rotate(-90)")
+              .attr("y", -margin.left + 20)
+              .attr("x", -height / 2)
+              .attr("fill", "black")
+              .text(yAxisLabel)
+
+          const xAxisTickFormat = number =>
+              d3.format(".2s")(number)
+                  .replace("G", "B")
+
+          const xAxisG = g.append("g")
+              .call(d3.axisBottom(xScale).tickSizeOuter(0))
+              .attr("transform", `translate(0,${height})`)
+
+          xAxisG.append("text")
+              .attr("class", "axis-label")
+              .attr("text-anchor", "middle")
+              .attr("x", width / 2)
+              .attr("y", 50)
+              .attr("fill", "black")
+              .text(xAxisLabel)
+
+          g.selectAll("circle").data(data)
+              .enter().append("circle")
+              .attr("cy", d => yScale(yColumn(d)))
+              .attr("cx", d => xScale(xColumn(d)))
+              .attr("r", d => circleSizeScale(circleSizeColumn(d)))
+              .style("fill", d => colorScale(colorColumn(d)))
+
+          g.append("text")
+              .attr("class", "title")
+              .attr("x", margin.left)
+              .attr("y", -20)
+              .text(title)
+
+          g.selectAll("mydots")
+              .data([...new Set(data.map(colorColumn))])
+              .enter()
+              .append("circle")
+                  .attr("cx", width + 70)
+                  .attr("cy", function(d,i){ return 160 + i*25}) // 160 is where the first dot appears. 25 is the distance between dots
+                  .attr("r", 7)
+                  .style("fill", d => colorScale(d))
+
+          g.selectAll("mylabels")
+            .data([...new Set(data.map(colorColumn))])
+            .enter()
+            .append("text")
+              .attr("x", width + 90)
+              .attr("y", function(d,i){ return 160 + i*25}) // 160 is where the first dot appears. 25 is the distance between dots
+              .style("fill", d => colorScale(d))
+              .text(d => d)
+              .attr("text-anchor", "left")
+              .style("alignment-baseline", "middle")
+        }
+
+  			d3.csv("flights.csv")
+          .then((flights) => {
+
+            flights.forEach(d => {
+              d.distance = +d.distance
+              d.arr_delay = +d.arr_delay
+              d.time_hour = new Date(d.time_hour)
+              d.year = new Date(d.year)
+            })
+
+            const mask = d => (d.arr_delay < 100) && (d.distance < 1000)
+            return sample = flights.filter(mask).slice(0,500)
+
+          })
+          .then((sample) => {
+
+            const carrierCounts = d3.nest()
+              .key(d => d.carrier)
+              .rollup(v => v.length)
+              .entries(sample)
+
+              sample.forEach(function(flight) {
+                  var result = carrierCounts.filter(function(carrier) {
+                      return carrier.key === flight.carrier
+                  })
+                  flight.carrierCount = (result[0] !== undefined) ? result[0].value : null;
+              })
+
+            render(sample)
+
+          })
+          .catch(function(error){
+             // handle error
+             console.log(error)
+          })
+
+		</script>
+	</body>
+</html>
