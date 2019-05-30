@@ -140,7 +140,7 @@
               .data([...new Set(data.map(colorColumn))])
               .join("circle")
                   .attr("cx", width + 70)
-                  .attr("cy", function(d,i){ return 160 + i*25}) // 160 is where the first dot appears. 25 is the distance between dots
+                  .attr("cy", (d,i) => 160 + i*25) // 160 is where the first dot appears. 25 is the distance between dots
                   .attr("r", 7)
                   .style("fill", d => colorScale(d))
 
@@ -150,7 +150,7 @@
             .data([...new Set(data.map(colorColumn))])
             .join("text")
               .attr("x", width + 90)
-              .attr("y", function(d,i){ return 160 + i*25}) // 160 is where the first dot appears. 25 is the distance between dots
+              .attr("y", (d,i) => 160 + i*25) // 160 is where the first label appears. 25 is the distance between labels
               .style("fill", d => colorScale(d))
               .attr("text-anchor", "left")
               .style("alignment-baseline", "middle")

@@ -5,25 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
     <title>Histogram</title>
-
     <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
     <script src="https://d3js.org/d3.v5.min.js"></script>
-
     <style>
       text {
         font: 11pt sans-serif;
         font-family: 'Open Sans', sans-serif;
       }
-
       .title {
         font-size: 22pt;
         font-weight: bold;
       }
-
       rect {
         fill: steelblue
       }
-
       .axis path,
       .axis line {
         fill: none;
@@ -31,136 +26,129 @@
         shape-rendering: crispEdges;
         stroke-width: 1px;
       }
-
       .axis-label {
         font-size: 16pt;
         font-weight: bold;
       }
-
     </style>
   </head>
   <body>
-    <!-- Create an svg for the chart -->
-    <svg width="960" height="500"></svg>
-
 		<script type="text/javascript">
 
         const capitalize = (str) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase())
 
-        const svg = d3.select("svg")
+        const outerWidth = 960,
+              outerHeight = 500,
+              margin = ({top: 30, right: 20, bottom: 30, left: 40}),
+              width  = outerWidth - margin.left - margin.right,
+              height = outerHeight - margin.top - margin.bottom
 
-        const outerWidth = +svg.attr("width")
-        const outerHeight = +svg.attr("height")
+        // Append an SVG to body with outerWidth and outerHeight
+        const svg = d3.select("body").append("svg")
+            .attr("width", outerWidth)
+            .attr("height", outerHeight)
+
+        // Append a group, shifted by margin.left and margin.top
+        const g = svg.append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`)
+
+        const xValue = d => d.dep_delay
+        const titleText = "Distribution of Departure Delay"
 
         const render = data => {
 
-          const xValue = d => d.dep_delay
-          const titleText = "Distribution of Departure Delay"
+            const xScale = d3.scaleLinear()
+                .domain(d3.extent(data, xValue)).nice()
+                .range([margin.left, width - margin.right])
 
-          const margin = ({top: 30, right: 20, bottom: 30, left: 40})
-          const width = outerWidth - margin.left - margin.right
-          const height = outerHeight - margin.top - margin.bottom
+            // SOURCE: https://observablehq.com/@d3/histogram
+            // SOURCE: https://www.d3-graph-gallery.com/histogram.html
+            // SOURCE: https://github.com/d3/d3-array/blob/master/README.md#bins
+            const histogram = d3.histogram()
+                .value(xValue)
+                .domain(xScale.domain())
+                .thresholds(xScale.ticks(40))
 
-          const xScale = d3.scaleLinear()
-              .domain(d3.extent(data, xValue)).nice()
-              .range([margin.left, width - margin.right])
+            const bins = histogram(data)
 
-          const histogram = d3.histogram()
-              .value(xValue)
-              .domain(xScale.domain())
-              .thresholds(xScale.ticks(40))
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(bins, d => d.length)]).nice()
+                .range([height - margin.bottom, margin.top])
 
-          const bins = histogram(data)
+            const bar = g.append("g")
+                .attr("fill", "steelblue")
+              .selectAll("rect")
+              .data(bins)
+              .join("rect")
+                .attr("x", d => xScale(d.x0) + 1)
+                .attr("width", d => Math.max(0, xScale(d.x1) - xScale(d.x0) - 1))
+                .attr("y", d => yScale(d.length))
+                .attr("height", d => yScale(0) - yScale(d.length))
 
-          const yScale = d3.scaleLinear()
-              .domain([0, d3.max(bins, d => d.length)]).nice()
-              .range([height - margin.bottom, margin.top])
+            // Specify the design of the group of elements for the xAxis
+            const xAxis = g => g
+                .attr("transform", `translate(0,${height - margin.bottom})`)
+                .call(d3.axisBottom(xScale).tickSizeOuter(0))
+                .call(g => g.append("text")
+                    .attr("class", "axis-label")
+                    .attr("x", width - margin.right)
+                    .attr("y", -10)
+                    .attr("fill", "#000")
+                    .attr("font-weight", "bold")
+                    .attr("text-anchor", "end")
+                    .text("Departure Delay"))
 
-          const g = svg.append("g")
-              .attr("transform", `translate(${margin.left},${margin.top})`)
+            g.append("g")
+                .call(xAxis)
 
-          const xAxis = g => g
-              .attr("transform", `translate(0,${height - margin.bottom})`)
-              .call(d3.axisBottom(xScale).tickSizeOuter(0))
-              .call(g => g.append("text")
-                  .attr("class", "axis-label")
-                  .attr("x", width - margin.right)
-                  .attr("y", -10)
-                  .attr("fill", "#000")
-                  .attr("font-weight", "bold")
-                  .attr("text-anchor", "end")
-                  .text("Departure Delay"))
+            // Specify the design of the group of elements for the yAxis
+            const yAxis = g => g
+                .attr("transform", `translate(${margin.left},0)`)
+                .call(d3.axisLeft(yScale))
+                .call(g => g.select(".domain").remove())
+                .call(g => g.select(".tick:last-of-type text").clone()
+                    .attr("class", "axis-label")
+                    .attr("x", 10)
+                    .attr("text-anchor", "start")
+                    .attr("font-weight", "bold")
+                    .text("Flights"))
 
-          const yAxis = g => g
-              .attr("transform", `translate(${margin.left},0)`)
-              .call(d3.axisLeft(yScale))
-              .call(g => g.select(".domain").remove())
-              .call(g => g.select(".tick:last-of-type text").clone()
-                  .attr("class", "axis-label")
-                  .attr("x", 10)
-                  .attr("text-anchor", "start")
-                  .attr("font-weight", "bold")
-                  .text("Flights"))
+            g.append("g")
+                .call(yAxis)
 
-          const bar = g.append("g")
-              .attr("fill", "steelblue")
-            .selectAll("rect")
-            .data(bins)
-            .join("rect")
-              .attr("x", d => xScale(d.x0) + 1)
-              .attr("width", d => Math.max(0, xScale(d.x1) - xScale(d.x0) - 1))
-              .attr("y", d => yScale(d.length))
-              .attr("height", d => yScale(0) - yScale(d.length))
+            // Append text to the chart to serve as the title
+            const title = g => g
+                .attr("transform", `translate(0,0)`)
+                .call(g => g.append("text")
+                    .attr("class", "title")
+                    .attr("x", width / 2)
+                    .attr("y", -2)
+                    .attr("text-anchor", "middle")
+                    .text(titleText))
 
-          g.append("g")
-              .call(xAxis)
-
-          g.append("g")
-              .call(yAxis)
-
-          const title = g => g
-              .attr("transform", `translate(0,0)`)
-              .call(g => g.append("text")
-                  .attr("class", "title")
-                  .attr("x", width / 2)
-                  .attr("y", -2)
-                  .attr("text-anchor", "middle")
-                  .text(titleText))
-
-          g.append("g")
-            .call(title)
+            g.append("g")
+              .call(title)
 
         }
 
-  			d3.csv("flights.csv")
+        // SOURCE: https://observablehq.com/@dakoop/reading-in-data-learn-js-data
+  			d3.csv("flights.csv", d3.autoType)
           .then((flights) => {
 
-            const someCarriers = flights.filter(flight =>
-                (flight.carrier == "AA" || flight.carrier == "DL" ||
-                 flight.carrier == "UA" || flight.carrier == "US") &&
-                 (flight.dep_delay > 0 && flight.dep_delay < 300))
+              // Filter for flights with (0 < departure delay < 300) and (carrier = AA or DL or UA or US)
+              const sampleFlights = flights.filter(flight =>
+                  (flight.carrier == "AA" || flight.carrier == "DL" ||
+                   flight.carrier == "UA" || flight.carrier == "US") &&
+                  (flight.dep_delay > 0 && flight.dep_delay < 300)
+                )
 
-            someCarriers.forEach(d => {
-              d.air_time = +d.air_time
-              d.arr_delay = +d.arr_delay
-              d.day = +d.day
-              d.dep_delay = +d.dep_delay
-              d.distance = +d.distance
-              d.hour = +d.hour
-              d.minute = +d.minute
-              d.month = +d.month
-              d.year = +d.year
-              d.time_hour = new Date(d.time_hour)
-              d.year_month = new Date(+d.year, +d.month-1)
-            })
-
-            console.log(someCarriers)
-            render(someCarriers)
+              console.log(sampleFlights)
+              render(sampleFlights)
 
           })
           .catch(function(error){
-             // handle error
-             console.log(error)
+              // handle error
+              console.log(error)
           })
 
 		</script>
