@@ -1,6 +1,6 @@
 # DataVisWithD3
 
-This repository contains files that illustrate how to create basic charts and plots with D3.  In order, the files create the following plots charts and plots:
+This repository contains files that illustrate how to create the following basic charts and plots with D3:
 
 ## 0a-margins
 
